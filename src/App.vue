@@ -1,17 +1,35 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Welcome to Your Vue.js App" />
+  <div v-for="pref in prefectures" :key="pref.prefCode">
+    <input type="checkbox" :value="pref.prefName" />
+    {{ pref.prefName }}
+  </div>
 </template>
 
 <script>
-import HelloWorld from "./components/HelloWorld.vue";
+import axios from "axios"
 
 export default {
   name: "App",
-  components: {
-    HelloWorld,
+  components: {},
+  data() {
+    return {
+      prefectures: "",
+    }
   },
-};
+  methods: {},
+  mounted: function () {
+    const prefectures_url =
+      "https://opendata.resas-portal.go.jp/api/v1/prefectures"
+    axios
+      .get(prefectures_url, {
+        headers: { "X-API-KEY": process.env.VUE_APP_RESAS_API_KEY },
+      })
+      .then((response) => {
+        this.prefectures = response.data.result
+        console.log(this.prefectures[0])
+      })
+  },
+}
 </script>
 
 <style>
