@@ -13,30 +13,58 @@
       </span>
     </div>
   </div>
-  <button @click="testPref">確認</button>
-  <div>Graph</div>
+  <line-chart :loaded="loaded" :chart-data="chartData" />
 </template>
 
 <script>
 import axios from "axios"
+import LineChart from "@/components/LineChart.vue"
 
 export default {
   name: "App",
-  components: {},
-  data() {
-    return {
-      prefectures: "",
-      population: [],
-    }
+  components: {
+    LineChart,
   },
+  data: () => ({
+    prefectures: null,
+    population: [],
+    loaded: false,
+    chartData: null,
+    COLORS: [
+      "#4dc9f6",
+      "#f67019",
+      "#f53794",
+      "#537bc4",
+      "#acc236",
+      "#166a8f",
+      "#00a950",
+      "#58595b",
+      "#8549ba",
+    ],
+  }),
   methods: {
     async onChangePref(event) {
-      if (!event.srcElement.checked) return
+      const isChecked = event.srcElement.checked
+      if (!isChecked) return
+
       const prefCode = event.target.value
-
-      if (this.population.filter((v) => v.code === prefCode).length > 0) return
-
       const name = this.prefectures[prefCode - 1].prefName
+
+      await this.getPrefecture(name, prefCode)
+      this.drawChart(isChecked)
+    },
+    async getAllPrefectures() {
+      const url = "https://opendata.resas-portal.go.jp/api/v1/prefectures"
+      this.prefectures = await axios
+        .get(url, {
+          headers: { "X-API-KEY": process.env.VUE_APP_RESAS_API_KEY },
+        })
+        .then((response) => {
+          return response.data.result
+        })
+    },
+    async getPrefecture(name, prefCode) {
+      console.log("await")
       const url =
         "https://opendata.resas-portal.go.jp/api/v1/population/composition/perYear"
 
@@ -55,22 +83,43 @@ export default {
             data: data[0].data,
           }
         })
+
       this.population.push(prefecture)
     },
-    async getAllPrefectures() {
-      const url = "https://opendata.resas-portal.go.jp/api/v1/prefectures"
-      this.prefectures = await axios
-        .get(url, {
-          headers: { "X-API-KEY": process.env.VUE_APP_RESAS_API_KEY },
+    drawChart(isChecked) {
+      const labels = []
+      const datasets = []
+      this.population.map((pop, i) => {
+        const data = []
+        pop.data.map((d) => {
+          if (i === 0) labels.push(d.year)
+          data.push(d.value)
         })
-        .then((response) => {
-          return response.data.result
+
+        const color = this.color(i)
+        datasets.push({
+          label: pop.name,
+          data: data,
+          borderColor: color,
+          backgroundColor: color,
         })
+      })
+
+      if (this.chartData && isChecked)
+        this.chartData = {
+          labels: labels,
+          datasets: [...datasets],
+        }
+      else
+        this.chartData = {
+          labels: labels,
+          datasets: datasets,
+        }
+
+      this.loaded = true
     },
-    testPref() {
-      console.log(this.population)
-      // const array = this.population.filter((v) => v.code === "1")
-      // console.log(array)
+    color(index) {
+      return this.COLORS[index % this.COLORS.length]
     },
   },
   mounted() {
@@ -94,7 +143,7 @@ export default {
 }
 
 header {
-  height: 10vh;
+  height: 5vh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -121,7 +170,6 @@ header {
 
 @media screen and (min-width: 1024px) {
   header {
-    height: 10vh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -151,6 +199,10 @@ header {
 }
 
 @media screen and (max-width: 899px) {
+  header {
+    height: 3.5vh;
+  }
+
   .pref_container {
     width: 90%;
   }
