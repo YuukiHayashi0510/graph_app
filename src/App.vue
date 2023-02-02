@@ -50,6 +50,9 @@ export default {
       const prefCode = event.target.value
       const name = this.prefectures[prefCode - 1].prefName
 
+      // 被り防止
+      if (this.population.filter((v) => v.code === prefCode).length > 0) return
+
       await this.getPrefecture(name, prefCode)
       this.drawChart(isChecked)
     },
